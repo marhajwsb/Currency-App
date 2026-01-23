@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
 from app.models.currency import Currency
@@ -18,9 +18,8 @@ def get_currencies(db: Session = Depends(get_db)):
 
 @router.get("/currencies/{date}")
 def get_currencies_by_date(date: str, db: Session = Depends(get_db)):
-    return db.query(Currency).filter(Currency.date==date).all()
+    return db.query(Currency).filter(Currency.date == date).all()
 
 @router.post("/currencies/fetch")
 def fetch_currencies():
-    # tutaj będzie logika pobierania danych z NBP
-    return {"message": "Dane pobrane"}
+    return {"message": "Endpoint gotowy, NBP API w kolejnym kroku"}
