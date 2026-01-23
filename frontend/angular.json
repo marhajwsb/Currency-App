@@ -3,11 +3,11 @@
   "version": 1,
   "cli": {
     "packageManager": "npm",
-    "analytics": "e49d5319-974e-4272-958d-fb03f52e03bc"
+    "analytics": "94ff68a1-e3a9-4e82-9d69-cb55357c8236"
   },
   "newProjectRoot": "projects",
   "projects": {
-    "currency-frontend": {
+    "frontend": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -67,10 +67,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "currency-frontend:build:production"
+              "buildTarget": "frontend:build:production"
             },
             "development": {
-              "buildTarget": "currency-frontend:build:development"
+              "buildTarget": "frontend:build:development"
             }
           },
           "defaultConfiguration": "development"
