@@ -17,7 +17,8 @@ def get_db():
 
 @router.get("/currencies")
 def get_currencies(db: Session = Depends(get_db)):
-    return db.query(Currency.currency_code).distinct().all()
+    result = db.query(Currency.currency_code).distinct().all()
+    return [r[0] for r in result]
 
 @router.get("/currencies/{date}")
 def get_currencies_by_date(date: str, db: Session = Depends(get_db)):
