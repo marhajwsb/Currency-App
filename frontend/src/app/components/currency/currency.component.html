@@ -1,0 +1,35 @@
+<div class="currency-container">
+  <h2>Kursy walut</h2>
+
+  <div class="controls">
+    <input type="date" [(ngModel)]="selectedDate">
+    <button (click)="fetchCurrencies()">Pobierz kursy</button>
+  </div>
+
+  <p *ngIf="message">{{ message }}</p>
+
+  <table *ngIf="currencies.length > 0">
+    <thead>
+      <tr>
+        <th>Waluta</th>
+        <th>Nazwa</th>
+        <th>Kurs</th>
+        <th>Data</th>
+        <th>Rok</th>
+        <th>Kwartal</th>
+        <th>Miesiąc</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let c of currencies">
+        <td>{{ c.currency_code }}</td>
+        <td>{{ c.currency_name }}</td>
+        <td>{{ c.rate }}</td>
+        <td>{{ c.date }}</td>
+        <td>{{ c.year }}</td>
+        <td>{{ c.quarter }}</td>
+        <td>{{ c.month }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>

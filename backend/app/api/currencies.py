@@ -24,7 +24,7 @@ def get_currencies(db: Session = Depends(get_db)):
 def get_currencies_by_date(date: str, db: Session = Depends(get_db)):
     return db.query(Currency).filter(Currency.date == date).all()
 
-@router.post("/currencies/fetch")
+@router.post("/currencies/fetch/today")
 def fetch_currencies(db: Session = Depends(get_db)):
     today = date.today()
 
