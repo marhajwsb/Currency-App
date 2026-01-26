@@ -1,53 +1,43 @@
-from datetime import date
-from app.services.date_utils import calculate_quarter
-from app.services.nbp_client import fetch_rates_for_date
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import delete
 from sqlalchemy.orm import Session
-from app.db.session import SessionLocal
-from app.models.currency import Currency
+from typing import List
+from datetime import date
+from app.models.currency import CurrencyRate
+from app.schemas.currency import CurrencyBase
+from app.services.nbp_client import NBPClient
+from app.repositories.session import get_db
 
-router = APIRouter()
+router = APIRouter(prefix="/currencies", tags=["currencies"])
+nbp_service = NBPClient()
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+@router.get("/", response_model=List[CurrencyBase])
+def get_all_rates(db: Session = Depends(get_db)):
+    return db.query(CurrencyRate).all()
 
-@router.get("/currencies")
-def get_currencies(db: Session = Depends(get_db)):
-    result = db.query(Currency.currency_code).distinct().all()
-    return [r[0] for r in result]
+@router.get("/{date_val}", response_model=List[CurrencyBase])
+def get_rates_by_date(date_val: date, db: Session = Depends(get_db)):
+    rates = db.query(CurrencyRate).filter(CurrencyRate.date == date_val).all()
+    if not rates:
+        raise HTTPException(status_code=404, detail="No data for this date in local DB")
+    return rates
 
-@router.get("/currencies/{date}")
-def get_currencies_by_date(date: str, db: Session = Depends(get_db)):
-    return db.query(Currency).filter(Currency.date == date).all()
+@router.post("/fetch")
+async def fetch_and_save(target_date: date, db: Session = Depends(get_db)):
+    rates_data = await nbp_service.fetch_rates_for_date(target_date)
+    
+    if not rates_data:
+        return {"message": "No data available from NBP for this date."}
 
-@router.post("/currencies/fetch/today")
-def fetch_currencies(db: Session = Depends(get_db)):
-    today = date.today()
+    db.execute(delete(CurrencyRate).where(CurrencyRate.date == target_date))
 
-    rates = fetch_rates_for_date(today)
-
-    saved = 0
-    for rate in rates:
-        currency = Currency(
-            currency_code=rate["code"],
-            currency_name=rate["currency"],
-            rate=rate["mid"],
-            date=today,
-            year=today.year,
-            month=today.month,
-            quarter=calculate_quarter(today.month)
+    for item in rates_data:
+        new_rate = CurrencyRate(
+            code=item['code'],
+            rate=item['mid'],
+            date=target_date
         )
-        db.add(currency)
-        saved += 1
-
+        db.add(new_rate)
+    
     db.commit()
-
-    return {
-        "message": "Currencies fetched and saved",
-        "date": str(today),
-        "saved_records": saved
-    }
+    return {"message": f"Successfully fetched {len(rates_data)} rates for {target_date}"}

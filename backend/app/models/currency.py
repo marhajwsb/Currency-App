@@ -1,15 +1,11 @@
-from sqlalchemy import Column, Integer, String, Numeric, Date
-from app.db.session import Base
+from sqlalchemy import Column, Integer, String, Float, Date
 
-class Currency(Base):
-    __tablename__ = "currencies"
+from app.repositories.base import Base
+
+class CurrencyRate(Base):
+    __tablename__ = "currency_rates"
 
     id = Column(Integer, primary_key=True, index=True)
-    currency_code = Column(String(3), index=True)
-    currency_name = Column(String(100))
-    rate = Column(Numeric(10, 4))
-    date = Column(Date)
-
-    year = Column(Integer)
-    quarter = Column(Integer)
-    month = Column(Integer)
+    code = Column(String(3), index=True)
+    rate = Column(Float)
+    date = Column(Date, index=True)
