@@ -1,15 +1,17 @@
-import { Component, signal } from '@angular/core';
-import { CurrencyComponent } from './components/currency/currency.component';
+import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { CurrencyComponent } from './components/currency/currency.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  template: `<h1>{{ title() }}</h1>
-             <app-currency></app-currency>`,
-  styleUrls: ['./app.scss'],
-  imports: [FormsModule, CurrencyComponent]
+  imports: [CommonModule, FormsModule, CurrencyComponent],
+  template: `
+    <main>
+      <app-currency></app-currency>
+    </main>
+  `,
+  styleUrls: ['./app.scss']
 })
-export class App {
-  protected readonly title = signal('frontend');
-}
+export class AppComponent {}

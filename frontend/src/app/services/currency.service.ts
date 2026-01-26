@@ -1,34 +1,25 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { environment } from '../../environments/environment';
-
-export interface Currency {
-  currency_code: string;
-  currency_name: string;
-  rate: number;
-  date: string;
-  year: number;
-  quarter: number;
-  month: number;
-}
+import { CurrencyRate } from '../models/currency.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CurrencyService {
+  private apiUrl = 'http://localhost:8000/currencies';
 
-  private baseUrl = environment.apiUrl;
+  constructor(private http: HttpClient) {}
 
-  constructor(private http: HttpClient) { }
-
-  fetchCurrencies(): Observable<{ message: string, date: string, saved_records: number }> {
-    return this.http.post<{ message: string, date: string, saved_records: number }>(
-      `${this.baseUrl}/currencies/fetch`, {}
-    );
+  getRatesByDate(date: string): Observable<CurrencyRate[]> {
+    return this.http.get<CurrencyRate[]>(`${this.apiUrl}/${date}`);
   }
 
-  getCurrenciesByDate(date: string): Observable<Currency[]> {
-    return this.http.get<Currency[]>(`${this.baseUrl}/currencies/${date}`);
+  fetchFromNBP(date: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/fetch?target_date=${date}`, {});
+  }
+
+  getAllRates(): Observable<CurrencyRate[]> {
+    return this.http.get<CurrencyRate[]>(`${this.apiUrl}/`);
   }
 }

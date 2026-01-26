@@ -1,35 +1,54 @@
 <div class="currency-container">
-  <h2>Kursy walut</h2>
+  <h1>NBP Currency Explorer</h1>
 
-  <div class="controls">
-    <input type="date" [(ngModel)]="selectedDate">
-    <button (click)="fetchCurrencies()">Pobierz kursy</button>
-  </div>
+  <section class="controls">
+    <div class="input-group">
+      <label for="date-picker">Wybierz datę:</label>
+      <input type="date" id="date-picker" [(ngModel)]="selectedDate" (change)="onDateChange()">
+    </div>
+    
+    <div class="button-group">
+      <button (click)="onFetchFromNBP()" [disabled]="loading" class="btn-fetch">
+        {{ loading ? 'Pobieranie...' : 'Pobierz z NBP do bazy' }}
+      </button>
+    </div>
+  </section>
 
-  <p *ngIf="message">{{ message }}</p>
+  <div *ngIf="errorMessage" class="error-banner">{{ errorMessage }}</div>
 
-  <table *ngIf="currencies.length > 0">
-    <thead>
-      <tr>
-        <th>Waluta</th>
-        <th>Nazwa</th>
-        <th>Kurs</th>
-        <th>Data</th>
-        <th>Rok</th>
-        <th>Kwartal</th>
-        <th>Miesiąc</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let c of currencies">
-        <td>{{ c.currency_code }}</td>
-        <td>{{ c.currency_name }}</td>
-        <td>{{ c.rate }}</td>
-        <td>{{ c.date }}</td>
-        <td>{{ c.year }}</td>
-        <td>{{ c.quarter }}</td>
-        <td>{{ c.month }}</td>
-      </tr>
-    </tbody>
-  </table>
+  <section class="results">
+    <table *ngIf="rates.length > 0 && !isSearching">
+      <thead>
+        <tr>
+          <th>Kod Waluty</th>
+          <th>Kurs (PLN)</th>
+          <th>Rok</th>
+          <th>Kwartał</th>
+          <th>Miesiąc</th>
+          <th>Dzień</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let r of rates">
+          <td><strong>{{ r.code }}</strong></td>
+          <td>{{ r.rate | number:'1.2-4' }}</td>
+          <td>{{ getYear(r.date) }}</td>
+          <td>Q{{ getQuarter(r.date) }}</td>
+          <td>{{ getMonth(r.date) }}</td>
+          <td>{{ r.date }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="status-container">
+      <div *ngIf="loading || isSearching" class="spinner">
+        Przetwarzanie danych...
+      </div>
+
+      <div *ngIf="rates.length === 0 && !loading && !isSearching" class="no-data-box">
+        <p class="info">Brak danych w lokalnej bazie dla wybranej daty.</p>
+        <p class="hint">Kliknij przycisk, aby zaktualizować bazę z serwerów NBP.</p>
+      </div>
+    </div>
+  </section>
 </div>
