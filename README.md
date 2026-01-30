@@ -1,5 +1,6 @@
 Opis funkcjonalości:
 1. Opis funkcjonalności aplikacji
+
 Aplikacja służy do archiwizacji i analizy kursów walut pobieranych z Narodowego Banku Polskiego.
   Pobieranie danych: Integracja z API NBP (Tabela A) pozwalająca na pobieranie danych w zakresach do 93 dni.
   Przechowywanie: Zastosowanie bazy danych SQLite do trwałego zapisu pobranych kursów, co eliminuje konieczność wielokrotnego odpytywania serwerów zewnętrznych.
@@ -40,3 +41,4 @@ Analiza błędów:
 W trakcie testów manualnych zidentyfikowano błąd w logice mapowania dat w komponentach filtrów.
 W określonych przypadkach filtry nie wyświetlają wszystkich dostępnych miesięcy/dni mimo obecności danych w bazie.
 Problem został udokumentowany i zakwalifikowany do poprawy w kolejnej wersji systemu (wymagana refaktoryzacja).
+
