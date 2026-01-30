@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.repositories.session import SessionLocal
 from app.models.currency import CurrencyRate
+from datetime import datetime
 
 client = TestClient(app)
 
@@ -16,16 +17,15 @@ def step_impl(context, url):
 
 @then('the response status code should be 200')
 def step_impl(context):
-    assert context.response.status_code == 200, f"Zły status: {context.response.status_code}"
+    assert context.response.status_code == 200, f"Zły status: {context.response.status_code}. Detale: {context.response.text}"
 
 @then('the database should contain rates for "{date_str}"')
 def step_impl(context, date_str):
-    from datetime import datetime
     target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
     
     db = SessionLocal()
     try:
         exists = db.query(CurrencyRate).filter(CurrencyRate.date == target_date).first()
-        assert exists is not None, f"Brak danych dla daty {date_str}"
+        assert exists is not None, f"Brak danych w bazie dla daty {date_str}"
     finally:
         db.close()

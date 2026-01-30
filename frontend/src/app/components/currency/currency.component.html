@@ -1,66 +1,163 @@
-<div class="container mt-5">
-  <div class="card shadow-sm">
-    <div class="card-header bg-primary text-white">
-      <h3 class="mb-0">NBP Currency Explorer</h3>
+<div class="container mt-4 mb-5">
+  <div class="card shadow">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+      <h4 class="mb-0">Panel Kursów Walut NBP</h4>
+      <span *ngIf="isSearching" class="badge bg-warning text-dark">Odświeżanie bazy...</span>
     </div>
-    
+
     <div class="card-body">
-      <section class="row g-3 align-items-end mb-4">
+      
+      <div class="row g-3 mb-4">
         <div class="col-md-4">
-          <label for="date-picker" class="form-label fw-bold">Wybierz datę kursu:</label>
-          <input type="date" id="date-picker" class="form-control" 
-                 [(ngModel)]="selectedDate" (change)="onDateChange()">
+          <label class="form-label fw-bold small text-uppercase">Data początkowa:</label>
+          <input 
+            type="date" 
+            class="form-control" 
+            [(ngModel)]="startDate"
+            [max]="getTodayDate()"
+            (ngModelChange)="onStartDateChange()">
+          <small class="text-muted">Maksymalnie do dzisiaj</small>
         </div>
         <div class="col-md-4">
-          <button (click)="onFetchFromNBP()" [disabled]="loading" class="btn btn-primary w-100">
+          <label class="form-label fw-bold small text-uppercase">
+            Data końcowa:
+            <span class="badge bg-info text-dark ms-1">Max 93 dni</span>
+          </label>
+          <input 
+            type="date" 
+            class="form-control" 
+            [(ngModel)]="endDate"
+            [min]="startDate"
+            [max]="getMaxEndDate()"
+            [disabled]="!startDate">
+          <small class="text-muted" *ngIf="startDate && endDate">
+            Zakres: {{ calculateDateRange() }} dni
+          </small>
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+          <button 
+            class="btn btn-success w-100 fw-bold" 
+            (click)="onFetchRange()" 
+            [disabled]="loading || !startDate">
             <span *ngIf="loading" class="spinner-border spinner-border-sm me-2"></span>
-            {{ loading ? 'Pobieranie danych...' : 'Zaktualizuj bazę z NBP' }}
+            {{ loading ? 'Pobieranie...' : 'Pobierz z NBP' }}
           </button>
         </div>
-      </section>
-
-      <div *ngIf="errorMessage" class="alert alert-danger d-flex align-items-center" role="alert">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-        {{ errorMessage }}
       </div>
 
-      <section class="results mt-4">
-        <div class="table-responsive" *ngIf="rates.length > 0 && !isSearching">
-          <table class="table table-striped table-hover align-middle border">
-            <thead class="table-light">
-              <tr>
-                <th>Kod</th>
-                <th>Kurs (PLN)</th>
-                <th>Rok</th>
-                <th class="text-center">Kwartał</th>
-                <th class="text-center">Miesiąc</th>
-                <th>Pełna Data</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let r of rates">
-                <td><span class="badge bg-secondary px-3 py-2">{{ r.code }}</span></td>
-                <td class="fw-bold text-primary">{{ r.rate | number:'1.2-4' }}</td>
-                <td>{{ getYear(r.date) }}</td>
-                <td class="text-center"><span class="badge rounded-pill bg-info text-dark">Q{{ getQuarter(r.date) }}</span></td>
-                <td class="text-center">{{ getMonth(r.date) }}</td>
-                <td class="text-muted small">{{ r.date }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show">
+        {{ errorMessage }}
+        <button type="button" class="btn-close" (click)="errorMessage = ''"></button>
+      </div>
 
-        <div class="text-center py-5" *ngIf="loading || isSearching">
-          <div class="spinner-grow text-primary" role="status"></div>
-          <p class="mt-2 text-muted">Przetwarzanie danych, proszę czekać...</p>
-        </div>
+      <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show">
+        {{ successMessage }}
+        <button type="button" class="btn-close" (click)="successMessage = ''"></button>
+      </div>
 
-        <div *ngIf="rates.length === 0 && !loading && !isSearching" class="alert alert-light border text-center py-4">
-          <i class="bi bi-info-circle fs-2 text-muted d-block mb-2"></i>
-          <p class="mb-1">Brak danych w lokalnej bazie dla wybranej daty.</p>
-          <small class="text-muted">Kliknij przycisk powyżej, aby zasilić bazę kursami z NBP.</small>
+      <hr class="my-4">
+
+      <div class="row g-2 mb-3 bg-light p-3 rounded border">
+        <div class="col-12 mb-2">
+          <label class="fw-bold small text-muted text-uppercase">Filtruj pobrane dane:</label>
         </div>
-      </section>
-    </div>
-  </div>
-</div>
+        
+        <div class="col-md-3">
+          <label class="form-label small">Rok:</label>
+          <select class="form-select" [(ngModel)]="filterYear" (ngModelChange)="onYearChange()">
+            <option value="">Wszystkie lata</option>
+            <option *ngFor="let year of availableYears" [value]="year">{{ year }}</option>
+          </select>
+        </div>
+        
+        <div class="col-md-2">
+          <label class="form-label small">Kwartał:</label>
+          <select class="form-select" [(ngModel)]="filterQuarter">
+            <option value="">Wszystkie</option>
+            <option value="1">Q1 (I-III)</option>
+            <option value="2">Q2 (IV-VI)</option>
+            <option value="3">Q3 (VII-IX)</option>
+            <option value="4">Q4 (X-XII)</option>
+          </select>
+        </div>
+        
+        <div class="col-md-3">
+          <label class="form-label small">Miesiąc:</label>
+          <select 
+            class="form-select" 
+            [(ngModel)]="filterMonth" 
+            (ngModelChange)="onMonthChange()" 
+            [disabled]="!filterYear">
+            <option value="">Wszystkie miesiące</option>
+            <option *ngFor="let month of availableMonths" [value]="month">
+              {{ getMonthName(month) }}
+            </option>
+          </select>
+        </div>
+        
+        <div class="col-md-2">
+          <label class="form-label small">Dzień:</label>
+          <select 
+            class="form-select" 
+            [(ngModel)]="filterDay" 
+            [disabled]="!filterYear || !filterMonth">
+            <option value="">Wszystkie dni</option>
+            <option *ngFor="let day of availableDays" [value]="day">{{ day }}</option>
+          </select>
+        </div>
+        
+        <div class="col-md-2 d-flex align-items-end">
+          <button class="btn btn-outline-secondary w-100" (click)="resetFilters()">
+            Wyczyść
+          </button>
+        </div>
+      </div>
+
+      <div class="table-responsive" *ngIf="filteredRates.length > 0">
+        <table class="table table-hover align-middle border">
+          <thead class="table-primary text-uppercase small">
+            <tr>
+              <th>Waluta</th>
+              <th>Średni Kurs (PLN)</th>
+              <th>Rok</th>
+              <th class="text-center">Kwartał</th>
+              <th class="text-center">Miesiąc</th>
+              <th class="text-center">Dzień</th>
+              <th>Data publikacji</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of filteredRates">
+              <td><span class="badge bg-secondary px-2 py-1">{{ r.code }}</span></td>
+              <td class="text-primary fw-bold fs-5">{{ r.rate | number:'1.2-4' }}</td>
+              <td>{{ getDateParts(r.date).year }}</td>
+              <td class="text-center">
+                <span class="badge rounded-pill bg-info text-dark">
+                  Q{{ getDateParts(r.date).quarter }}
+                </span>
+              </td>
+              <td class="text-center">{{ getMonthName(getDateParts(r.date).month) }}</td>
+              <td class="text-center">{{ getDateParts(r.date).day }}</td>
+              <td class="text-muted small">{{ r.date }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div *ngIf="filteredRates.length === 0 && rates.length > 0 && !isSearching" 
+           class="alert alert-warning mt-3 text-center py-4">
+        <h5 class="mb-1 text-dark">Brak wyników dla wybranych filtrów</h5>
+        <p class="text-muted mb-0 small">Spróbuj zmienić kryteria filtrowania.</p>
+      </div>
+
+      <div *ngIf="rates.length === 0 && !isSearching && !loading" 
+           class="alert alert-info mt-3 text-center py-5 border-dashed">
+        <h5 class="mb-2 text-muted">Baza danych jest pusta</h5>
+        <p class="mb-3">Wybierz datę powyżej i kliknij "Pobierz z NBP"</p>
+        <button class="btn btn-primary btn-sm mt-2" (click)="onFetchRange()" [disabled]="!startDate">
+          Pobierz dane
+        </button>
+      </div>
+
+    </div> </div> </div> ```
+
