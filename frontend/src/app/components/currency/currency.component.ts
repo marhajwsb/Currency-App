@@ -5,6 +5,13 @@ import { CurrencyService } from '../../services/currency.service';
 import { CurrencyRate } from '../../models/currency.model';
 import { finalize } from 'rxjs/operators';
 
+interface ParsedDate {
+  year: string;
+  month: string;
+  day: string;
+  quarter: string;
+}
+
 @Component({
   selector: 'app-currency',
   standalone: true,
@@ -71,7 +78,6 @@ export class CurrencyComponent implements OnInit {
     }
   }
 
-
   calculateDateRange(): number {
     if (!this.startDate || !this.endDate) return 0;
     
@@ -133,98 +139,119 @@ export class CurrencyComponent implements OnInit {
       });
   }
 
+  /**
+   * KLUCZOWA FUNKCJA - niezawodne parsowanie różnych formatów dat
+   */
+  private parseDate(dateString: string): ParsedDate | null {
+    if (!dateString) return null;
+
+    // Normalizuj separatory
+    const normalized = dateString.replace(/[\.\/]/g, '-');
+    const parts = normalized.split('-');
+    
+    if (parts.length !== 3) return null;
+
+    let year: string, month: string, day: string;
+
+    // Sprawdź długość pierwszej części, żeby określić format
+    if (parts[0].length === 4) {
+      // Format: YYYY-MM-DD lub YYYY-M-D
+      year = parts[0];
+      month = parts[1].padStart(2, '0');
+      day = parts[2].padStart(2, '0');
+    } else {
+      // Format: DD-MM-YYYY lub D-M-YYYY
+      day = parts[0].padStart(2, '0');
+      month = parts[1].padStart(2, '0');
+      year = parts[2];
+    }
+
+    // Walidacja
+    const monthNum = parseInt(month, 10);
+    const dayNum = parseInt(day, 10);
+    const yearNum = parseInt(year, 10);
+
+    if (monthNum < 1 || monthNum > 12) return null;
+    if (dayNum < 1 || dayNum > 31) return null;
+    if (yearNum < 1900 || yearNum > 2100) return null;
+
+    const quarter = Math.ceil(monthNum / 3).toString();
+
+    return { year, month, day, quarter };
+  }
+
   get filteredRates(): CurrencyRate[] {
     if (!this.rates || this.rates.length === 0) return [];
 
     return this.rates.filter(r => {
-      const normalizedDate = r.date.replace(/[\.\/]/g, '-');
-      const parts = normalizedDate.split('-');
-      
-      if (parts.length !== 3) return true;
+      const parsed = this.parseDate(r.date);
+      if (!parsed) return false;
 
-      // Wykryj format daty
-      let year, month, day;
-      if (parts[0].length === 4) {
-        // Format: YYYY-MM-DD
-        year = parts[0];
-        month = parts[1].padStart(2, '0');
-        day = parts[2].padStart(2, '0');
-      } else {
-        // Format: DD-MM-YYYY
-        day = parts[0].padStart(2, '0');
-        month = parts[1].padStart(2, '0');
-        year = parts[2];
-      }
-
-      const monthNum = parseInt(month, 10);
-      const quarter = Math.ceil(monthNum / 3).toString();
-
-      const matchesYear = !this.filterYear || year === this.filterYear;
-      const matchesQuarter = !this.filterQuarter || quarter === this.filterQuarter;
-      const matchesMonth = !this.filterMonth || month === this.filterMonth;
-      const matchesDay = !this.filterDay || day === this.filterDay;
+      const matchesYear = !this.filterYear || parsed.year === this.filterYear;
+      const matchesQuarter = !this.filterQuarter || parsed.quarter === this.filterQuarter;
+      const matchesMonth = !this.filterMonth || parsed.month === this.filterMonth;
+      const matchesDay = !this.filterDay || parsed.day === this.filterDay;
 
       return matchesYear && matchesQuarter && matchesMonth && matchesDay;
     });
   }
 
+  /**
+   * POPRAWIONE - zbiera wszystkie unikalne lata
+   */
   get availableYears(): string[] {
     const years = new Set<string>();
+    
     this.rates.forEach(r => {
-      const normalizedDate = r.date.replace(/[\.\/]/g, '-');
-      const parts = normalizedDate.split('-');
-      if (parts.length === 3) {
-        const year = parts[0].length === 4 ? parts[0] : parts[2];
-        years.add(year);
+      const parsed = this.parseDate(r.date);
+      if (parsed) {
+        years.add(parsed.year);
       }
     });
+    
     return Array.from(years).sort().reverse();
   }
 
+  /**
+   * POPRAWIONE - zbiera wszystkie miesiące dla wybranego roku
+   */
   get availableMonths(): string[] {
     if (!this.filterYear) return [];
     
     const months = new Set<string>();
+    
     this.rates.forEach(r => {
-      const normalizedDate = r.date.replace(/[\.\/]/g, '-');
-      const parts = normalizedDate.split('-');
-      if (parts.length === 3) {
-        const year = parts[0].length === 4 ? parts[0] : parts[2];
-        const month = parts[0].length === 4 ? parts[1] : parts[1];
-        
-        if (year === this.filterYear) {
-          months.add(month.padStart(2, '0'));
-        }
+      const parsed = this.parseDate(r.date);
+      if (parsed && parsed.year === this.filterYear) {
+        months.add(parsed.month);
       }
     });
-    return Array.from(months).sort();
+    
+    const sorted = Array.from(months).sort();
+    console.log('Available months for year', this.filterYear, ':', sorted);
+    return sorted;
   }
 
+  /**
+   * POPRAWIONE - zbiera wszystkie dni dla wybranego roku i miesiąca
+   */
   get availableDays(): string[] {
     if (!this.filterYear || !this.filterMonth) return [];
     
     const days = new Set<string>();
+    
     this.rates.forEach(r => {
-      const normalizedDate = r.date.replace(/[\.\/]/g, '-');
-      const parts = normalizedDate.split('-');
-      if (parts.length === 3) {
-        let year, month, day;
-        if (parts[0].length === 4) {
-          year = parts[0];
-          month = parts[1].padStart(2, '0');
-          day = parts[2].padStart(2, '0');
-        } else {
-          year = parts[2];
-          month = parts[1].padStart(2, '0');
-          day = parts[0].padStart(2, '0');
-        }
-        
-        if (year === this.filterYear && month === this.filterMonth) {
-          days.add(day);
-        }
+      const parsed = this.parseDate(r.date);
+      if (parsed && 
+          parsed.year === this.filterYear && 
+          parsed.month === this.filterMonth) {
+        days.add(parsed.day);
       }
     });
-    return Array.from(days).sort();
+    
+    const sorted = Array.from(days).sort();
+    console.log('Available days for', this.filterYear, this.filterMonth, ':', sorted);
+    return sorted;
   }
 
   refreshLocalData(): void {
@@ -234,6 +261,12 @@ export class CurrencyComponent implements OnInit {
       .subscribe({
         next: (data) => {
           this.rates = data;
+          console.log('Loaded rates:', data.length);
+          
+          // Debug: wyświetl pierwsze kilka dat
+          if (data.length > 0) {
+            console.log('Sample dates:', data.slice(0, 5).map(r => r.date));
+          }
         },
         error: () => {
           this.rates = [];
@@ -251,31 +284,22 @@ export class CurrencyComponent implements OnInit {
   onYearChange(): void {
     this.filterMonth = '';
     this.filterDay = '';
+    console.log('Year changed to:', this.filterYear);
+  }
+
+  onQuarterChange(): void {
+    this.filterMonth = '';
+    this.filterDay = '';
   }
 
   onMonthChange(): void {
     this.filterDay = '';
+    console.log('Month changed to:', this.filterMonth);
   }
 
-  getDateParts(date: string): { year: string, month: string, day: string, quarter: string } {
-    const normalizedDate = date.replace(/[\.\/]/g, '-');
-    const parts = normalizedDate.split('-');
-    
-    let year, month, day;
-    if (parts[0].length === 4) {
-      year = parts[0];
-      month = parts[1].padStart(2, '0');
-      day = parts[2].padStart(2, '0');
-    } else {
-      year = parts[2];
-      month = parts[1].padStart(2, '0');
-      day = parts[0].padStart(2, '0');
-    }
-    
-    const monthNum = parseInt(month, 10);
-    const quarter = Math.ceil(monthNum / 3).toString();
-    
-    return { year, month, day, quarter };
+  getDateParts(date: string): ParsedDate {
+    const parsed = this.parseDate(date);
+    return parsed || { year: '?', month: '?', day: '?', quarter: '?' };
   }
 
   getMonthName(monthNum: string): string {
@@ -283,6 +307,7 @@ export class CurrencyComponent implements OnInit {
       'Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec',
       'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'
     ];
-    return months[parseInt(monthNum, 10) - 1] || monthNum;
+    const index = parseInt(monthNum, 10) - 1;
+    return months[index] || monthNum;
   }
 }

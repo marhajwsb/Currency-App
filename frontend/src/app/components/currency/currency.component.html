@@ -72,7 +72,7 @@
         
         <div class="col-md-2">
           <label class="form-label small">Kwartał:</label>
-          <select class="form-select" [(ngModel)]="filterQuarter">
+          <select class="form-select" [(ngModel)]="filterQuarter" (ngModelChange)="onQuarterChange()">
             <option value="">Wszystkie</option>
             <option value="1">Q1 (I-III)</option>
             <option value="2">Q2 (IV-VI)</option>
@@ -159,5 +159,6 @@
         </button>
       </div>
 
-    </div> </div> </div> ```
-
+    </div>
+  </div>
+</div>
